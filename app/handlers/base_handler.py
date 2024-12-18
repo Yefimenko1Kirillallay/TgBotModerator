@@ -11,7 +11,7 @@ from aiogram.enums import content_type
 from app.bot_file import bot
 import app.keyboards as kb
 import app.database as db
-import app.messages as mes
+
 
 from config import *
 
@@ -54,7 +54,7 @@ async def mat_del(message, galoba=False):  # мут за мат
 
 async def AnswerToUser(message, is_admin, is_chat):  # ответы на сообщения людей
     user = await db.get_user(message.from_user.id)
-    message_text = re.sub(r'[^\w\s]', '', message.text.lower())
+    message_text = re.sub(r'[^a-zа-яё0-9\s]', '', message.text.lower())
     topics = await db.get_topics()
 
     if message_text == 'ви жалоба' and message.reply_to_message:
@@ -73,7 +73,7 @@ async def AnswerToUser(message, is_admin, is_chat):  # ответы на соо�
                 break
 
 
-@router.message(F.animation | F.sticker)  # Замечания за спам гифками, можно сюда добавить и стикеры
+@router.message(F.animation | F.sticker)  # Замечания за спам гифками и стикерами
 async def flood_handler(message: Message):
     chat_admins = await message.chat.get_administrators()
     admin_ids = [admin.user.id for admin in chat_admins]
@@ -95,10 +95,15 @@ async def text_handler(message: Message):
     user = await db.get_user(message.from_user.id)
     chat = await db.get_chat(message.chat.id)
 
-    chat_admins = await message.chat.get_administrators()
-    admin_ids = [admin.user.id for admin in chat_admins]
-    is_admin = message.from_user.id in admin_ids
     is_chat = message.chat.type in ["group", "supergroup"]
+    print(message.chat.type)
+    print(is_chat)
+    if is_chat:
+        chat_admins = await message.chat.get_administrators()
+        admin_ids = [admin.user.id for admin in chat_admins]
+        is_admin = message.from_user.id in admin_ids
+    else:
+        is_admin = True
 
     if is_chat and (not is_admin):
         # Проверка на ссылки
@@ -118,7 +123,7 @@ async def text_handler(message: Message):
     await AnswerToUser(message=message, is_admin=is_admin, is_chat=is_chat)
 
 
-@router.message(F.new_chat_members)  # встреча новичков, удаление ботов открытый чат
+@router.message(F.new_chat_members)  # встреча новичков, удаление ботов,        открытый чат
 async def new_member_handler(message: Message):
     for new_member in message.new_chat_members:
         if new_member.is_bot or str(new_member.id).startswith('-100'):
